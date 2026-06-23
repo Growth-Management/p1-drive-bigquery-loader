@@ -17,7 +17,7 @@ IMAGE_NAME="${IMAGE_NAME:-p1-drive-bigquery-loader}"
 CLOUD_RUN_JOB_NAME="${CLOUD_RUN_JOB_NAME:-p1-drive-bigquery-loader}"
 
 RUNTIME_SA_ID="${RUNTIME_SA_ID:-p1-drive-bigquery-loader}"
-DEPLOY_SA_ID="${DEPLOY_SA_ID:-github-actions-p1-drive-bigquery-loader}"
+DEPLOY_SA_ID="${DEPLOY_SA_ID:-gh-p1-drive-bq-loader}"
 WIF_POOL_ID="${WIF_POOL_ID:-github-actions}"
 WIF_PROVIDER_ID="${WIF_PROVIDER_ID:-p1-drive-bigquery-loader}"
 

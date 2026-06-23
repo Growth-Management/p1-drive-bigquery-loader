@@ -6,7 +6,7 @@ REGION="${REGION:-asia-northeast1}"
 ARTIFACT_REPO="${ARTIFACT_REPO:-p1-drive-bigquery-loader}"
 CLOUD_RUN_JOB_NAME="${CLOUD_RUN_JOB_NAME:-p1-drive-bigquery-loader}"
 RUNTIME_SA_ID="${RUNTIME_SA_ID:-p1-drive-bigquery-loader}"
-DEPLOY_SA_ID="${DEPLOY_SA_ID:-github-actions-p1-drive-bigquery-loader}"
+DEPLOY_SA_ID="${DEPLOY_SA_ID:-gh-p1-drive-bq-loader}"
 ARCHIVE_BUCKET="${ARCHIVE_BUCKET:-ice-qb-p1-drive-bigquery-loader-archive}"
 SLACK_SECRET_ID="${SLACK_SECRET_ID:-slack-webhook-ice-adm-system-alerts}"
 

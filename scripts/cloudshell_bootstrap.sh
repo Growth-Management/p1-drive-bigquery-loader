@@ -5,12 +5,14 @@ set -euo pipefail
 # Usage:
 #   export GITHUB_OWNER="Growth-Management"
 #   export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
+#   export SKIP_IAM_BINDINGS="true"  # Use this when IAM was granted by an admin.
 #   bash scripts/cloudshell_bootstrap.sh
 
 PROJECT_ID="${PROJECT_ID:-ice-qb}"
 REGION="${REGION:-asia-northeast1}"
 GITHUB_REPO="${GITHUB_REPO:-p1-drive-bigquery-loader}"
 GITHUB_OWNER="${GITHUB_OWNER:-}"
+SKIP_IAM_BINDINGS="${SKIP_IAM_BINDINGS:-false}"
 
 ARTIFACT_REPO="${ARTIFACT_REPO:-p1-drive-bigquery-loader}"
 IMAGE_NAME="${IMAGE_NAME:-p1-drive-bigquery-loader}"
@@ -70,20 +72,24 @@ fi
 RUNTIME_SA="${RUNTIME_SA_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 DEPLOY_SA="${DEPLOY_SA_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-echo "Granting deploy service account IAM..."
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member "serviceAccount:${DEPLOY_SA}" \
-  --role "roles/run.admin" \
-  --condition=None >/dev/null
+if [[ "${SKIP_IAM_BINDINGS}" == "true" ]]; then
+  echo "Skipping IAM bindings because SKIP_IAM_BINDINGS=true."
+else
+  echo "Granting deploy service account IAM..."
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${DEPLOY_SA}" \
+    --role "roles/run.admin" \
+    --condition=None >/dev/null
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member "serviceAccount:${DEPLOY_SA}" \
-  --role "roles/artifactregistry.writer" \
-  --condition=None >/dev/null
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${DEPLOY_SA}" \
+    --role "roles/artifactregistry.writer" \
+    --condition=None >/dev/null
 
-gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" \
-  --member "serviceAccount:${DEPLOY_SA}" \
-  --role "roles/iam.serviceAccountUser" >/dev/null
+  gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" \
+    --member "serviceAccount:${DEPLOY_SA}" \
+    --role "roles/iam.serviceAccountUser" >/dev/null
+fi
 
 echo "Creating archive bucket if missing..."
 if ! gcloud storage buckets describe "gs://${ARCHIVE_BUCKET}" >/dev/null 2>&1; then
@@ -93,25 +99,29 @@ if ! gcloud storage buckets describe "gs://${ARCHIVE_BUCKET}" >/dev/null 2>&1; t
     --uniform-bucket-level-access
 fi
 
-echo "Granting runtime service account IAM..."
-gcloud storage buckets add-iam-policy-binding "gs://${ARCHIVE_BUCKET}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/storage.objectCreator" >/dev/null
+if [[ "${SKIP_IAM_BINDINGS}" == "true" ]]; then
+  echo "Skipping runtime IAM bindings because SKIP_IAM_BINDINGS=true."
+else
+  echo "Granting runtime service account IAM..."
+  gcloud storage buckets add-iam-policy-binding "gs://${ARCHIVE_BUCKET}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/storage.objectCreator" >/dev/null
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/bigquery.jobUser" \
-  --condition=None >/dev/null
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/bigquery.jobUser" \
+    --condition=None >/dev/null
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/bigquery.dataViewer" \
-  --condition=None >/dev/null
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/bigquery.dataViewer" \
+    --condition=None >/dev/null
 
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/bigquery.dataEditor" \
-  --condition=None >/dev/null
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/bigquery.dataEditor" \
+    --condition=None >/dev/null
+fi
 
 echo "Creating Slack webhook secret if missing..."
 if ! gcloud secrets describe "${SLACK_SECRET_ID}" >/dev/null 2>&1; then
@@ -124,9 +134,13 @@ else
   echo "SLACK_WEBHOOK_URL is empty. Secret was created/confirmed, but no new version was added."
 fi
 
-gcloud secrets add-iam-policy-binding "${SLACK_SECRET_ID}" \
-  --member "serviceAccount:${RUNTIME_SA}" \
-  --role "roles/secretmanager.secretAccessor" >/dev/null
+if [[ "${SKIP_IAM_BINDINGS}" == "true" ]]; then
+  echo "Skipping Slack secret IAM binding because SKIP_IAM_BINDINGS=true."
+else
+  gcloud secrets add-iam-policy-binding "${SLACK_SECRET_ID}" \
+    --member "serviceAccount:${RUNTIME_SA}" \
+    --role "roles/secretmanager.secretAccessor" >/dev/null
+fi
 
 echo "Creating Workload Identity Federation pool/provider if missing..."
 if ! gcloud iam workload-identity-pools describe "${WIF_POOL_ID}" \
@@ -151,9 +165,13 @@ fi
 WIF_PROVIDER="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/providers/${WIF_PROVIDER_ID}"
 WIF_PRINCIPAL="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/attribute.repository/${GITHUB_OWNER}/${GITHUB_REPO}"
 
-gcloud iam service-accounts add-iam-policy-binding "${DEPLOY_SA}" \
-  --member "${WIF_PRINCIPAL}" \
-  --role "roles/iam.workloadIdentityUser" >/dev/null
+if [[ "${SKIP_IAM_BINDINGS}" == "true" ]]; then
+  echo "Skipping WIF service account binding because SKIP_IAM_BINDINGS=true."
+else
+  gcloud iam service-accounts add-iam-policy-binding "${DEPLOY_SA}" \
+    --member "${WIF_PRINCIPAL}" \
+    --role "roles/iam.workloadIdentityUser" >/dev/null
+fi
 
 echo
 echo "Bootstrap complete."

@@ -6,6 +6,11 @@ app:
 drive:
   folder_id: "1sHao0pDhsjT6lJPBRUcedVuQ3XsJUYeA"
   search_scope: direct_children
+  auth_mode: oauth_refresh_token
+  oauth_secret_names:
+    client_id: drive-oauth-client-id
+    client_secret: drive-oauth-client-secret
+    refresh_token: drive-oauth-refresh-token
   unexpected_csv_policy: warn
   target_files:
     - file_name: sf_mstrs.csv

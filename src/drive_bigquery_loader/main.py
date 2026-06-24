@@ -88,7 +88,7 @@ def run_batch(
     target_by_name = {target.file_name: target for target in config.target_files}
     target_names = list(target_by_name)
 
-    drive = DriveClient()
+    drive = DriveClient.from_config(config)
     csv_validator = CsvValidator(config)
     gcs_archive = GcsArchive(config) if not dry_run else None
     bq_validator = BigQueryValidator(config)

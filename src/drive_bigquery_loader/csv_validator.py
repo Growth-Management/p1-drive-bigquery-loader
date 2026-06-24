@@ -61,9 +61,10 @@ class CsvValidator:
         self,
         files: dict[str, LocalCsvFile],
         targets: list[TargetFileConfig],
-    ) -> list[str]:
+    ) -> tuple[list[str], list[str]]:
         """Validate cross-file consistency before staging."""
         errors: list[str] = []
+        warnings: list[str] = []
         target_by_name = {target.file_name: target for target in targets}
         errors.extend(self._validate_modified_time_window(files))
 
@@ -79,11 +80,11 @@ class CsvValidator:
                 errors.append(f"{file_name}: missing key columns: {missing_keys}")
 
         if errors:
-            return errors
+            return errors, warnings
 
-        self._validate_title_detail_code_reference(errors, files, target_by_name)
-        self._validate_actual_detail_month(errors, files, target_by_name)
-        return errors
+        self._validate_title_detail_code_reference(errors, warnings, files, target_by_name)
+        self._validate_actual_detail_month(errors, warnings, files, target_by_name)
+        return errors, warnings
 
     def _validate_header(
         self,
@@ -221,9 +222,11 @@ class CsvValidator:
             target_config.source_column_for_bq(bq_column),
         )
 
-    def _append_missing_reference_error(
+    def _append_missing_reference_issue(
         self,
         errors: list[str],
+        warnings: list[str],
+        policy: str,
         file_name: str,
         column_name: str,
         child_values: set[str],
@@ -232,10 +235,16 @@ class CsvValidator:
         missing_values = sorted(child_values - parent_values)
         if missing_values:
             sample = missing_values[:20]
-            errors.append(
+            message = (
                 f"{file_name}: {column_name} has values not found in reference: "
                 f"count={len(missing_values)}, sample={sample}"
             )
+            if policy == "warning":
+                warnings.append(message)
+            elif policy == "ignore":
+                return
+            else:
+                errors.append(message)
 
     def _validate_modified_time_window(
         self,
@@ -270,6 +279,7 @@ class CsvValidator:
     def _validate_title_detail_code_reference(
         self,
         errors: list[str],
+        warnings: list[str],
         files: dict[str, LocalCsvFile],
         target_by_name: dict[str, TargetFileConfig],
     ) -> None:
@@ -279,6 +289,7 @@ class CsvValidator:
         )
         if not check_config.get("enabled", True):
             return
+        policy = check_config.get("on_missing", "error")
 
         master_file = check_config["master_file"]
         master_key_column = check_config["master_key_column"]
@@ -296,8 +307,10 @@ class CsvValidator:
                 target_by_name[child_file],
                 child_key_column,
             )
-            self._append_missing_reference_error(
+            self._append_missing_reference_issue(
                 errors,
+                warnings,
+                policy,
                 child_file,
                 child_key_column,
                 child_values,
@@ -307,6 +320,7 @@ class CsvValidator:
     def _validate_actual_detail_month(
         self,
         errors: list[str],
+        warnings: list[str],
         files: dict[str, LocalCsvFile],
         target_by_name: dict[str, TargetFileConfig],
     ) -> None:
@@ -316,6 +330,7 @@ class CsvValidator:
         )
         if not check_config.get("enabled", True):
             return
+        policy = check_config.get("on_missing", "error")
 
         actual_file = check_config["actual_file"]
         detail_file = check_config["detail_file"]
@@ -329,11 +344,21 @@ class CsvValidator:
             target_by_name[detail_file],
             check_config["detail_day_column"],
         )
-        detail_months = {value[:6] for value in detail_days if len(value) >= 6}
-        self._append_missing_reference_error(
+        detail_months = {
+            month for value in detail_days if (month := self._month_from_value(value))
+        }
+        self._append_missing_reference_issue(
             errors,
+            warnings,
+            policy,
             detail_file,
             f"{check_config['detail_day_column']} month",
             detail_months,
             actual_months,
         )
+
+    def _month_from_value(self, value: str) -> str | None:
+        digits = "".join(character for character in value if character.isdigit())
+        if len(digits) < 6:
+            return None
+        return digits[:6]

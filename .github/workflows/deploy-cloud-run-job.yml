@@ -64,7 +64,7 @@ jobs:
             --memory "${JOB_MEMORY}" \
             --task-timeout "${JOB_TIMEOUT}" \
             --max-retries "${JOB_MAX_RETRIES}" \
-            --args "--config,config/config.yaml,config/config.prod.yaml"
+            --args="--config,config/config.yaml,config/config.prod.yaml"
 
       - name: Verify Cloud Run Job
         run: |

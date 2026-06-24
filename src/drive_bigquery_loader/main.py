@@ -141,13 +141,19 @@ def run_batch(
         if validation_errors:
             raise ValueError(f"CSV validation failed: {validation_errors}")
 
-        consistency_errors = csv_validator.validate_batch_consistency(
+        consistency_errors, consistency_warnings = csv_validator.validate_batch_consistency(
             local_files,
             config.target_files,
         )
+        warnings.extend(consistency_warnings)
         if consistency_errors:
             raise ValueError(f"Batch consistency validation failed: {consistency_errors}")
-        audit.event(batch_id, "batch_consistency_validated", {})
+        audit.event(
+            batch_id,
+            "batch_consistency_validated",
+            {"warnings": consistency_warnings},
+            severity="WARNING" if consistency_warnings else "INFO",
+        )
 
         load_targets = build_load_targets(
             config,

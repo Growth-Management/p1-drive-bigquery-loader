@@ -1,0 +1,27 @@
+app:
+  environment: prod
+
+drive:
+  unexpected_csv_policy: warn
+
+batch:
+  max_modified_time_diff_seconds: null
+
+bigquery:
+  backup:
+    enabled: false
+    restore_on_failure: true
+
+notify:
+  enabled: true
+  channel_name: ice_adm_system_alerts
+  webhook_url_secret_id: "projects/ice-qb/secrets/slack-webhook-ice-adm-system-alerts/versions/latest"
+  notify_on:
+    success: false
+    warning: true
+    failure: true
+
+deploy:
+  cloud_run_job:
+    name: p1-drive-bigquery-loader
+    runtime_service_account: p1-drive-bigquery-loader@ice-qb.iam.gserviceaccount.com

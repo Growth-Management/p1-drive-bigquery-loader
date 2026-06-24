@@ -53,7 +53,7 @@ class AuditLogger:
 
     def _jsonable(self, value: Any) -> Any:
         if is_dataclass(value):
-            return asdict(value)
+            return self._jsonable(asdict(value))
         if isinstance(value, dict):
             return {key: self._jsonable(item) for key, item in value.items()}
         if isinstance(value, list):

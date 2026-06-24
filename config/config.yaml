@@ -127,6 +127,7 @@ batch:
     require_non_empty_business_keys: true
     title_detail_code_reference:
       enabled: true
+      on_missing: warning
       master_file: sf_mstrs.csv
       master_key_column: title_detail_code
       child_files:
@@ -136,6 +137,7 @@ batch:
           key_column: title_detail_code
     actual_detail_month:
       enabled: true
+      on_missing: warning
       actual_file: p1_log_actual.csv
       actual_month_column: sales_date_yyyymm
       detail_file: p1_log_detail.csv

@@ -1,0 +1,207 @@
+app:
+  name: p1-drive-bigquery-loader
+  environment: prod
+  timezone: Asia/Tokyo
+
+drive:
+  folder_id: "1sHao0pDhsjT6lJPBRUcedVuQ3XsJUYeA"
+  search_scope: direct_children
+  unexpected_csv_policy: warn
+  target_files:
+    - file_name: sf_mstrs.csv
+      table_name: sf_mstrs
+      duplicate_policy: allow
+      duplicate_key_columns:
+        - title_detail_code
+      expected_header:
+        - 発売元出版社名
+        - "発行元出版社名: 発行元出版社名"
+        - レーベル名
+        - プロダクトコード
+        - 電子出版コード
+        - 書誌名
+        - 著者
+        - 価格（税抜）
+        - 言語コード
+        - 販売開始日
+        - 著者識別ID
+        - 著者区分
+        - 著者名
+        - 支払先コード
+        - 印税率変更条件
+        - 印税率変更 売上額
+        - 印税率変更 売上数
+        - 初期印税率
+        - 変更後の印税率
+        - 支払額
+        - 支払留保上限額
+        - 源泉徴収種別
+      bq_columns:
+        - distributor_name
+        - publisher_name
+        - publisher_label_name
+        - title_detail_code
+        - title_reference_code
+        - title_detail_name
+        - title_author_name
+        - list_price
+        - title_language
+        - title_released_date
+        - rights_holder_id
+        - rights_holder_type
+        - rights_holder_name
+        - rights_holder_code
+        - loyalty_modif_cond
+        - loyalty_modif_cond_sales
+        - loyalty_modif_cond_lot
+        - loyalty_rate_initial
+        - loyalty_rate_current
+        - loyalty_amount_advanced
+        - loyalty_amount_reserved
+        - loyalty_withholding_tax
+    - file_name: p1_log_actual.csv
+      table_name: p1_log_actual
+      duplicate_policy: error
+      duplicate_key_columns:
+        - sales_date_yyyymm
+        - store_code
+        - title_detail_code
+      expected_header:
+        - sales_date_yyyymm
+        - store_code
+        - title_detail_code
+        - store_price
+        - sales_units
+        - sales_net_net
+      bq_columns:
+        - sales_date_yyyymm
+        - store_code
+        - title_detail_code
+        - store_price
+        - sales_units
+        - sales_net_net
+    - file_name: p1_log_detail.csv
+      table_name: p1_log_detail
+      duplicate_policy: error
+      duplicate_key_columns:
+        - sales_date_yyyymmdd
+        - store_code
+        - title_detail_code
+        - store_price
+        - sales_price
+      expected_header:
+        - sales_date_yyyymmdd
+        - store_code
+        - store_name
+        - store_margin_rate
+        - sales_currency
+        - title_detail_code
+        - store_price
+        - sales_price
+        - sales_units
+        - sales_net
+        - store_promotion_charges
+      bq_columns:
+        - sales_date_yyyymmdd
+        - store_code
+        - store_name
+        - store_margin_rate
+        - sales_currency
+        - title_detail_code
+        - store_price
+        - sales_price
+        - sales_units
+        - sales_net
+        - store_promotion_charges
+
+csv:
+  encoding: utf-8
+  delimiter: ","
+  quotechar: '"'
+  has_header: true
+  allow_extra_columns: false
+  allow_missing_columns: false
+  duplicate_key_blank_policy: error
+  max_validation_errors: 20
+
+batch:
+  all_or_nothing: true
+  max_modified_time_diff_seconds: null
+  consistency:
+    require_non_empty_business_keys: true
+    title_detail_code_reference:
+      enabled: true
+      master_file: sf_mstrs.csv
+      master_key_column: title_detail_code
+      child_files:
+        - file_name: p1_log_actual.csv
+          key_column: title_detail_code
+        - file_name: p1_log_detail.csv
+          key_column: title_detail_code
+    actual_detail_month:
+      enabled: true
+      actual_file: p1_log_actual.csv
+      actual_month_column: sales_date_yyyymm
+      detail_file: p1_log_detail.csv
+      detail_day_column: sales_date_yyyymmdd
+
+gcs:
+  archive_bucket: "ice-qb-p1-drive-bigquery-loader-archive"
+  archive_prefix: "p1-drive-bigquery-loader/raw"
+
+bigquery:
+  project_id: ice-qb
+  dataset_id: ice_qb_source
+  staging_dataset_id: ice_qb_source
+  staging_table_prefix: "_stg_drive_"
+  cleanup_staging_on_success: false
+  location: asia-northeast1
+  create_disposition: CREATE_NEVER
+  write_disposition_staging: WRITE_TRUNCATE
+  write_disposition_final: WRITE_TRUNCATE
+  backup:
+    enabled: false
+    dataset_id: ice_qb_source
+    table_prefix: "_backup_drive_"
+    retention_days: 7
+    restore_on_failure: true
+
+audit:
+  log_table: "ice-qb.ice_qb_source._drive_bigquery_loader_audit"
+  enable_bigquery_log: false
+  include_drive_file_metadata: true
+  include_validation_samples: true
+
+notify:
+  enabled: false
+  provider: slack_webhook
+  channel_name: ice_adm_system_alerts
+  webhook_url_secret_id: "projects/ice-qb/secrets/slack-webhook-ice-adm-system-alerts/versions/latest"
+  notify_on:
+    success: false
+    warning: true
+    failure: true
+
+deploy:
+  github_repository: p1-drive-bigquery-loader
+  default_branch: main
+  workflow_file: .github/workflows/deploy-cloud-run-job.yml
+  trigger:
+    push_branches:
+      - main
+    workflow_dispatch: true
+  artifact_registry:
+    region: asia-northeast1
+    repository: p1-drive-bigquery-loader
+    image_name: p1-drive-bigquery-loader
+  cloud_run_job:
+    name: p1-drive-bigquery-loader
+    region: asia-northeast1
+    timeout: 3600s
+    memory: 2Gi
+    cpu: "1"
+    max_retries: 0
+    runtime_service_account: p1-drive-bigquery-loader@ice-qb.iam.gserviceaccount.com
+  github_actions:
+    deploy_service_account_secret: GCP_DEPLOY_SERVICE_ACCOUNT
+    workload_identity_provider_secret: GCP_WORKLOAD_IDENTITY_PROVIDER

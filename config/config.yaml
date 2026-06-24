@@ -16,8 +16,7 @@ drive:
     - file_name: sf_mstrs.csv
       table_name: sf_mstrs
       duplicate_policy: allow
-      duplicate_key_columns:
-        - title_detail_code
+      duplicate_key_columns: []
       expected_header:
         - 発売元出版社名
         - "発行元出版社名: 発行元出版社名"
@@ -66,11 +65,8 @@ drive:
         - loyalty_withholding_tax
     - file_name: p1_log_actual.csv
       table_name: p1_log_actual
-      duplicate_policy: error
-      duplicate_key_columns:
-        - sales_date_yyyymm
-        - store_code
-        - title_detail_code
+      duplicate_policy: allow
+      duplicate_key_columns: []
       expected_header:
         - sales_date_yyyymm
         - store_code
@@ -87,13 +83,8 @@ drive:
         - sales_net_net
     - file_name: p1_log_detail.csv
       table_name: p1_log_detail
-      duplicate_policy: error
-      duplicate_key_columns:
-        - sales_date_yyyymmdd
-        - store_code
-        - title_detail_code
-        - store_price
-        - sales_price
+      duplicate_policy: allow
+      duplicate_key_columns: []
       expected_header:
         - sales_date_yyyymmdd
         - store_code

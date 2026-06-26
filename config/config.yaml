@@ -144,7 +144,7 @@ batch:
       detail_day_column: sales_date_yyyymmdd
 
 gcs:
-  archive_bucket: "ice-qb-p1-drive-bigquery-loader-archive"
+  archive_bucket: "ice-qb-p1-drive-bigquery-loader-archive-us"
   archive_prefix: "p1-drive-bigquery-loader/raw"
 
 bigquery:
@@ -153,7 +153,7 @@ bigquery:
   staging_dataset_id: ice_qb_source
   staging_table_prefix: "_stg_drive_"
   cleanup_staging_on_success: false
-  location: asia-northeast1
+  location: US
   create_disposition: CREATE_NEVER
   write_disposition_staging: WRITE_TRUNCATE
   write_disposition_final: WRITE_TRUNCATE

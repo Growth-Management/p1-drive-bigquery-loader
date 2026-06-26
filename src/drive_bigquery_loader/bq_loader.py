@@ -77,6 +77,15 @@ class BigQueryLoader:
                 f"actual={table.num_rows}, expected={expected_rows}"
             )
 
+    def validate_final_row_count_matches_staging(self, load_target: LoadTarget) -> None:
+        staging_rows = self._client.get_table(load_target.staging_table_id).num_rows
+        final_rows = self._client.get_table(load_target.final_table_id).num_rows
+        if final_rows != staging_rows:
+            raise ValueError(
+                f"Final row count mismatch for {load_target.table_name}: "
+                f"final={final_rows}, staging={staging_rows}"
+            )
+
     def create_backup_tables(
         self,
         load_targets: dict[str, LoadTarget],

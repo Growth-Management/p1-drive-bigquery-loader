@@ -193,6 +193,8 @@ def run_batch(
                     dry_run=dry_run,
                     staging_only=staging_only,
                 )
+                if not dry_run and not staging_only:
+                    bq_loader.validate_final_row_count_matches_staging(load_target)
         except Exception:
             backup_config = config.raw["bigquery"].get("backup", {})
             if backup_config.get("restore_on_failure", True) and backup_table_ids:

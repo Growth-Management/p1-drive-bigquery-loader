@@ -211,7 +211,14 @@ def run_batch(
                     {"backup_tables": backup_table_ids},
                 )
             raise
-        audit.event(batch_id, "final_replaced", {"staging_only": staging_only})
+        if dry_run or staging_only:
+            audit.event(
+                batch_id,
+                "final_replace_skipped",
+                {"dry_run": dry_run, "staging_only": staging_only},
+            )
+        else:
+            audit.event(batch_id, "final_replaced", {"staging_only": staging_only})
 
 
 def build_load_targets(

@@ -158,7 +158,7 @@ bigquery:
   write_disposition_staging: WRITE_TRUNCATE
   write_disposition_final: WRITE_TRUNCATE
   backup:
-    enabled: false
+    enabled: true
     dataset_id: ice_qb_source
     table_prefix: "_backup_drive_"
     retention_days: 7

@@ -39,6 +39,21 @@ sys.modules.setdefault(
 
 from drive_bigquery_loader.bq_loader import BigQueryLoader
 from drive_bigquery_loader.config import AppConfig, TargetFileConfig
+from drive_bigquery_loader.models import LoadTarget
+
+
+class FakeQueryJob:
+    def result(self):
+        return None
+
+
+class FakeBigQueryClient:
+    def __init__(self):
+        self.queries = []
+
+    def query(self, query, location=None):
+        self.queries.append((query, location))
+        return FakeQueryJob()
 
 
 class BigQueryLoaderTest(unittest.TestCase):
@@ -75,6 +90,51 @@ class BigQueryLoaderTest(unittest.TestCase):
             [field.mode for field in job_config.schema],
             ["NULLABLE", "NULLABLE"],
         )
+
+    def test_final_replace_nulls_empty_strings(self):
+        app_config = AppConfig(
+            raw={
+                "csv": {"delimiter": ",", "quotechar": '"'},
+                "bigquery": {
+                    "project_id": "ice-qb",
+                    "location": "US",
+                    "write_disposition_staging": "WRITE_TRUNCATE",
+                },
+            },
+            target_files=[],
+        )
+        target_config = TargetFileConfig(
+            file_name="sf_mstrs.csv",
+            table_name="sf_mstrs",
+            duplicate_policy="allow",
+            duplicate_key_columns=[],
+            expected_header=["col_a", "col_b"],
+            bq_columns=["col_a", "col_b"],
+        )
+        load_target = LoadTarget(
+            file_name="sf_mstrs.csv",
+            table_name="sf_mstrs",
+            final_table_id="ice-qb.ice_qb_source.sf_mstrs",
+            staging_table_id="ice-qb.ice_qb_source._stg_drive_sf_mstrs_test",
+            gcs_uri="gs://bucket/sf_mstrs.csv",
+        )
+        client = FakeBigQueryClient()
+
+        BigQueryLoader(
+            app_config,
+            client=client,
+        ).replace_final_from_staging(
+            load_target,
+            target_config,
+            dry_run=False,
+            staging_only=False,
+        )
+
+        query, location = client.queries[0]
+        self.assertEqual(location, "US")
+        self.assertIn("NULLIF(`col_a`, '') AS `col_a`", query)
+        self.assertIn("NULLIF(`col_b`, '') AS `col_b`", query)
+        self.assertIn("INSERT INTO `ice-qb.ice_qb_source.sf_mstrs`", query)
 
 
 if __name__ == "__main__":

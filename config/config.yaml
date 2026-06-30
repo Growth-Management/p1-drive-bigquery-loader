@@ -182,6 +182,9 @@ notify:
     success: false
     warning: true
     failure: true
+  suppress_warning_contains:
+    - "title_detail_code has values not found in reference: count=1, sample=['2316320006']"
+    - "sales_date_yyyymmdd month has values not found in reference"
 
 deploy:
   github_repository: p1-drive-bigquery-loader

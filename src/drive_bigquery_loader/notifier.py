@@ -27,13 +27,29 @@ class Notifier:
         )
 
     def notify_warning(self, batch_id: str, warnings: list[str]) -> None:
+        visible_warnings = self._visible_warnings(warnings)
+        if not visible_warnings:
+            self._logger.info(
+                "Notification skipped because all warnings are suppressed: %s",
+                warnings,
+            )
+            return
+
         self._send(
             "warning",
             {
                 "status": "warning",
                 "batch_id": batch_id,
-                "warnings": warnings,
-                "text": self._format_text("warning", batch_id, {"warnings": warnings}),
+                "warnings": visible_warnings,
+                "suppressed_warning_count": len(warnings) - len(visible_warnings),
+                "text": self._format_text(
+                    "warning",
+                    batch_id,
+                    {
+                        "warnings": visible_warnings,
+                        "suppressed_warning_count": len(warnings) - len(visible_warnings),
+                    },
+                ),
             },
         )
 
@@ -86,4 +102,33 @@ class Notifier:
         prefix = f"[{app_name}][{environment}][{status}] batch_id={batch_id}"
         if channel:
             prefix = f"{prefix} channel={channel}"
-        return f"{prefix} details={json.dumps(details, ensure_ascii=False)}"
+        return "\n".join([prefix, *self._format_detail_lines(status, details)])
+
+    def _format_detail_lines(self, status: str, details: dict[str, Any]) -> list[str]:
+        if status == "warning":
+            warnings = details.get("warnings", [])
+            lines = ["warnings:"]
+            lines.extend(f"{index}. {warning}" for index, warning in enumerate(warnings, 1))
+            suppressed_count = details.get("suppressed_warning_count", 0)
+            if suppressed_count:
+                lines.append(f"suppressed_known_warnings: {suppressed_count}")
+            return lines
+
+        if status == "failure":
+            return ["error:", str(details.get("error", ""))]
+
+        return ["details:", json.dumps(details, ensure_ascii=False, indent=2)]
+
+    def _visible_warnings(self, warnings: list[str]) -> list[str]:
+        return [
+            warning
+            for warning in warnings
+            if not self._is_suppressed_warning(warning)
+        ]
+
+    def _is_suppressed_warning(self, warning: str) -> bool:
+        suppress_patterns = self._config.raw.get("notify", {}).get(
+            "suppress_warning_contains",
+            [],
+        )
+        return any(pattern in warning for pattern in suppress_patterns)

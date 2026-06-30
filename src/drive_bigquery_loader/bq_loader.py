@@ -25,7 +25,20 @@ class BigQueryLoader:
         if dry_run:
             return
 
-        job_config = bigquery.LoadJobConfig(
+        job_config = self._build_staging_load_job_config(target_config)
+        job = self._client.load_table_from_uri(
+            load_target.gcs_uri,
+            load_target.staging_table_id,
+            job_config=job_config,
+            location=self._config.bq_location,
+        )
+        job.result()
+
+    def _build_staging_load_job_config(
+        self,
+        target_config: TargetFileConfig,
+    ) -> bigquery.LoadJobConfig:
+        return bigquery.LoadJobConfig(
             schema=[
                 bigquery.SchemaField(name=column, field_type="STRING", mode="NULLABLE")
                 for column in target_config.bq_columns
@@ -39,14 +52,8 @@ class BigQueryLoader:
             write_disposition=self._config.raw["bigquery"]["write_disposition_staging"],
             autodetect=False,
             allow_quoted_newlines=True,
+            null_marker="",
         )
-        job = self._client.load_table_from_uri(
-            load_target.gcs_uri,
-            load_target.staging_table_id,
-            job_config=job_config,
-            location=self._config.bq_location,
-        )
-        job.result()
 
     def replace_final_from_staging(
         self,

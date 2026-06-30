@@ -9,8 +9,12 @@ batch:
 
 bigquery:
   backup:
-    enabled: false
+    enabled: true
     restore_on_failure: true
+
+audit:
+  enable_bigquery_log: true
+  fail_on_bigquery_error: false
 
 notify:
   enabled: true

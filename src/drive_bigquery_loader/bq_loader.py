@@ -66,11 +66,15 @@ class BigQueryLoader:
             return
 
         columns = ", ".join(f"`{column}`" for column in target_config.bq_columns)
+        select_columns = ", ".join(
+            f"NULLIF(`{column}`, '') AS `{column}`"
+            for column in target_config.bq_columns
+        )
         query = f"""
         TRUNCATE TABLE `{load_target.final_table_id}`;
 
         INSERT INTO `{load_target.final_table_id}` ({columns})
-        SELECT {columns}
+        SELECT {select_columns}
         FROM `{load_target.staging_table_id}`;
         """
         job = self._client.query(query, location=self._config.bq_location)

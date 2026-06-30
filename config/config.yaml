@@ -166,7 +166,10 @@ bigquery:
 
 audit:
   log_table: "ice-qb.ice_qb_source._drive_bigquery_loader_audit"
+  run_table: "ice-qb.ice_qb_source.__ingestion_runs"
+  file_table: "ice-qb.ice_qb_source.__ingestion_files"
   enable_bigquery_log: false
+  fail_on_bigquery_error: false
   include_drive_file_metadata: true
   include_validation_samples: true
 
